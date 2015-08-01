@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 )
 
 const predictedUsersCount = 1500
@@ -77,16 +77,7 @@ func printClusters() {
 		}
 
 		sort.Strings(clusterEmails)
-
-		var b bytes.Buffer
-		for index, email := range clusterEmails {
-			if index != 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(email)
-		}
-
-		clusterStrings[clusterIndex] = b.String()
+		clusterStrings[clusterIndex] = strings.Join(clusterEmails, ", ")
 	}
 
 	sort.Strings(clusterStrings)
