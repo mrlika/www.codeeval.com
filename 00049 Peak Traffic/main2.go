@@ -21,7 +21,15 @@ func main() {
 	cleanConnections()
 	findClusters()
 	printClusters()
-	//fmt.Printf("users %d, active users %d, clusters %d\n", len(userEmails), len(connections), len(clusters))
+
+	/*fmt.Printf("users %d, active users %d, clusters %d\n", len(userEmails), len(connections), len(clusters))
+
+	file, _ := os.Open(os.Args[1])
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}*/
 }
 
 func findClusters() {
@@ -32,25 +40,27 @@ func findClusters() {
 		for userId2, _ := range user1Connections {
 			if userId2 < userId1 {
 				continue // Skip mirrored connections
-			} else if !isClusterExists(userId1, userId2) {
-				doCluster(userId1, userId2)
+			} else {
+				findSuperClasters(map[int]struct{}{userId1: struct{}{}, userId2: struct{}{}})
 			}
 		}
 	}
 }
 
-func doCluster(userId1 int, userId2 int) {
-	cluster := map[int]struct{}{userId1: struct{}{}, userId2: struct{}{}}
+func findSuperClasters(baseCluster map[int]struct{}) {
+	hasSuperClusters := false
 
-	// Iterate over all users and try to add them to cluster
+	// Iterate over all users and try to add them to base cluster
 	for potentialUserId, potentialUserConnections := range connections {
-		if (potentialUserId == userId1) || (potentialUserId == userId2) { // Skip users already in cluster
+		// Skip users already in base cluster
+		_, present := baseCluster[potentialUserId]
+		if present {
 			continue
 		}
 
 		// Check if potential user connected to cluster
 		var connected bool
-		for clusterUserId, _ := range cluster {
+		for clusterUserId, _ := range baseCluster {
 			_, connected = potentialUserConnections[clusterUserId]
 			if !connected { // Not connected to one of cluster users
 				break
@@ -58,12 +68,18 @@ func doCluster(userId1 int, userId2 int) {
 		}
 
 		if connected {
-			cluster[potentialUserId] = struct{}{} // Add user to cluster
+			hasSuperClusters = true
+
+			// Recursively find super clusters of the cluster with added new user
+			biggerBaseCluster := createClusterCopy(baseCluster)
+			biggerBaseCluster[potentialUserId] = struct{}{}
+			findSuperClasters(biggerBaseCluster)
 		}
 	}
 
-	if len(cluster) >= 3 {
-		clusters = append(clusters, cluster)
+	if (!hasSuperClusters) && (len(baseCluster) >= 3) && (!isClusterExists(baseCluster)) {
+		// Add final cluster to list of all clusters
+		clusters = append(clusters, baseCluster)
 	}
 }
 
@@ -96,16 +112,31 @@ func printClusters() {
 	}
 }
 
-func isClusterExists(userId1 int, userId2 int) bool {
+func createClusterCopy(cluster map[int]struct{}) map[int]struct{} {
+	clusterCopy := make(map[int]struct{})
+	for userId, _ := range cluster {
+		clusterCopy[userId] = struct{}{}
+	}
+
+	return clusterCopy
+}
+
+func isClusterExists(clusterToCheck map[int]struct{}) bool {
 	for _, cluster := range clusters {
-		_, present := cluster[userId1]
+		if len(clusterToCheck) != len(cluster) {
+			continue
+		}
+
+		var present bool
+		for userId, _ := range clusterToCheck {
+			_, present = cluster[userId]
+			if !present {
+				break
+			}
+		}
 
 		if present {
-			_, present = cluster[userId2]
-
-			if present {
-				return true
-			}
+			return true
 		}
 	}
 
