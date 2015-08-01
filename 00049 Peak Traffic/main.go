@@ -10,6 +10,7 @@ import (
 
 const predictedUsersCount = 1500
 const predictedClastersCount = 10
+const predictedClasterSize = 6
 
 var userEmails []string
 var connections map[int]map[int]struct{}
@@ -24,7 +25,7 @@ func main() {
 }
 
 func findClusters() {
-	clusters = make([]map[int]struct{}, 0, 10)
+	clusters = make([]map[int]struct{}, 0, predictedClastersCount)
 
 	// Iterate over all connections
 	for userId1, user1Connections := range connections {
@@ -70,7 +71,7 @@ func printClusters() {
 	clusterStrings := make([]string, len(clusters))
 
 	for clusterIndex, cluster := range clusters {
-		clusterEmails := make([]string, 0, 6)
+		clusterEmails := make([]string, 0, predictedClasterSize)
 		for userId, _ := range cluster {
 			clusterEmails = append(clusterEmails, userEmails[userId])
 		}
@@ -158,22 +159,18 @@ func readInput() {
 }
 
 func cleanConnections() {
-	for userId1, userConnections := range connections {
+	for userId1, user1Connections := range connections {
 		// Remove single side connections
-		for userId2, _ := range userConnections {
-			if !isUsersConnected(userId2, userId1) {
-				delete(userConnections, userId2)
+		for userId2, _ := range user1Connections {
+			_, present := connections[userId2][userId1]
+			if !present {
+				delete(user1Connections, userId2)
 			}
 		}
 
 		// Remove users without connections
-		if len(userConnections) == 0 {
+		if len(user1Connections) == 0 {
 			delete(connections, userId1)
 		}
 	}
-}
-
-func isUsersConnected(userId1 int, userId2 int) bool {
-	_, present := connections[userId1][userId2]
-	return present
 }
