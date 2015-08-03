@@ -10,7 +10,6 @@ import (
 
 const predictedUsersCount = 1500
 const predictedClastersCount = 10
-const predictedClasterSize = 6
 
 var userEmails []string
 var connections map[int]map[int]struct{}
@@ -53,16 +52,14 @@ func findSuperClasters(baseCluster map[int]struct{}) {
 	// Iterate over all users and try to add them to base cluster
 	for potentialUserId, potentialUserConnections := range connections {
 		// Skip users already in base cluster
-		_, present := baseCluster[potentialUserId]
-		if present {
+		if _, present := baseCluster[potentialUserId]; present {
 			continue
 		}
 
 		// Check if potential user connected to cluster
 		var connected bool
 		for clusterUserId, _ := range baseCluster {
-			_, connected = potentialUserConnections[clusterUserId]
-			if !connected { // Not connected to one of cluster users
+			if _, connected = potentialUserConnections[clusterUserId]; !connected { // Not connected to one of cluster users
 				break
 			}
 		}
@@ -87,7 +84,7 @@ func printClusters() {
 	clusterStrings := make([]string, len(clusters))
 
 	for clusterIndex, cluster := range clusters {
-		clusterEmails := make([]string, 0, predictedClasterSize)
+		clusterEmails := make([]string, 0, len(cluster))
 		for userId, _ := range cluster {
 			clusterEmails = append(clusterEmails, userEmails[userId])
 		}
@@ -120,8 +117,7 @@ func isClusterExists(clusterToCheck map[int]struct{}) bool {
 
 		var present bool
 		for userId, _ := range clusterToCheck {
-			_, present = cluster[userId]
-			if !present {
+			if _, present = cluster[userId]; !present {
 				break
 			}
 		}
@@ -151,32 +147,25 @@ func readInput() {
 			scanner.Scan()
 		}
 
-		// Read 2 emails, define user id by email, create new users if needed
+		// Read 2 emails, define user ID by email, create new users if needed
+		var connectionUserIds [2]int
+		for i := 0; i < len(connectionUserIds); i++ {
+			scanner.Scan()
+			email := scanner.Text()
 
-		scanner.Scan()
-		email1 := scanner.Text()
+			userId, present := userIds[email]
+			if !present {
+				userId = len(userEmails)
+				userIds[email] = userId
+				userEmails = append(userEmails, email)
+				connections[userId] = make(map[int]struct{})
+			}
 
-		userId1, present := userIds[email1]
-		if !present {
-			userId1 = len(userEmails)
-			userIds[email1] = userId1
-			userEmails = append(userEmails, email1)
-			connections[userId1] = make(map[int]struct{})
-		}
-
-		scanner.Scan()
-		email2 := scanner.Text()
-
-		userId2, present := userIds[email2]
-		if !present {
-			userId2 = len(userEmails)
-			userIds[email2] = userId2
-			userEmails = append(userEmails, email2)
-			connections[userId2] = make(map[int]struct{})
+			connectionUserIds[i] = userId
 		}
 
 		// Store connection
-		connections[userId1][userId2] = struct{}{}
+		connections[connectionUserIds[0]][connectionUserIds[1]] = struct{}{}
 	}
 }
 
@@ -184,8 +173,7 @@ func cleanConnections() {
 	for userId1, user1Connections := range connections {
 		// Remove single side connections
 		for userId2, _ := range user1Connections {
-			_, present := connections[userId2][userId1]
-			if !present {
+			if _, present := connections[userId2][userId1]; !present {
 				delete(user1Connections, userId2)
 			}
 		}
